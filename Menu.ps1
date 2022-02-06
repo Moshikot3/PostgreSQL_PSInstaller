@@ -1,15 +1,5 @@
-﻿##PostgreSQL Powershell module install(If needed)
-$AidocUser = "aidocapp"
+﻿$AidocUser = "aidocapp"
 $AidocPass = "aidcopass"
-
-
-
-if (Get-Module -ListAvailable -Name PostgreSQLCmdlets) {
-    Import-Module PostgreSQLCmdlets
-} else {
-    Write-Host "PostgreSQLCmdlets is missing, Installing now" -ForegroundColor Yellow
-    Install-Module PostgreSQLCmdlets
-}
 
 $ProgressPreference = 'SilentlyContinue'
 $ScriptPath = "D:\PostgreSQL"
@@ -98,7 +88,7 @@ function PostgreSQLVersions
 }
 
 
-function DownloadNInstall()
+function DownloadNInstall
 {
 	do
 	{
@@ -160,6 +150,15 @@ function DownloadNInstall()
             Write-Host "Error occured Please contact your Administrator"
         }
 
+
+        Write-Host "Creating user"
+        #Create AidocApp user
+        #--Last directory set-location
+        Set-Location "$PostgreDirectory\$((gci $PostgreDirectory | ? { $_.PSIsContainer } | sort CreationTime)[-1].Name)\bin\"
+        $env:PGPASSWORD = 'aidcopass';
+        .\psql -U postgres -c "CREATE ROLE $($AidocUser) LOGIN SUPERUSER PASSWORD '$($aidocPass)';"
+            
+
         pause
         $ans = "Q"
 
@@ -173,8 +172,10 @@ function DownloadNInstall()
 
 if ([Environment]::Is64BitOperatingSystem) {
 	$bit = "Windows x86-64"
+    $PostgreDirectory = "C:\Program Files\PostgreSQL"
 } else {
 	$bit = "Windows x86-32"
+    $PostgreDirectory = "C:\Program Files (x86)\PostgreSQL"
 }
 
 ##Collect all Available PostgreSQL Versions
