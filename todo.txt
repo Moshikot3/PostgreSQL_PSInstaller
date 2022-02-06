@@ -1,5 +1,5 @@
 -Run script with PSScriptRoot (From everywhere)
--Study PostgreSQL and their Installation Arguments
--Verify if PostgreSQL already installed
+-Study PostgreSQL and their Installation Arguments 
+-Verify if PostgreSQL already installed -V
 -Verify internet connection
 -Add some logs

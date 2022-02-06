@@ -1,6 +1,7 @@
 ﻿##PostgreSQL Powershell module install(If needed)
+$AidocUser = "aidocapp"
+$AidocPass = "aidcopass"
 
- 
 
 
 if (Get-Module -ListAvailable -Name PostgreSQLCmdlets) {
@@ -12,34 +13,27 @@ if (Get-Module -ListAvailable -Name PostgreSQLCmdlets) {
 
 $ProgressPreference = 'SilentlyContinue'
 $ScriptPath = "D:\PostgreSQL"
+ ."$($Scriptpath)\Essentials\Checks.ps1"
 
 
+    #Cleaning some variables for testing
+    $PostgreSQLWebData = $null
+    $ScrapperAddVersion = $null
+    ##New Scraping tool
+    $Page = Invoke-WebRequest 'https://www.enterprisedb.com/downloads/postgres-postgresql-downloads'
+    $Unicode = [System.Text.Encoding]::Unicode.GetBytes($Page.Content)
+    $Document = New-Object -Com 'HTMLFile'
+    if ($Document.IHTMLDocument2_Write) { $Document.IHTMLDocument2_Write($Unicode) } else { $Document.write($Unicode) }
+    $Document.Close()
+    $Data = $Document.getElementById('__NEXT_DATA__').innerHTML | ConvertFrom-Json
+    #$Data |ConvertTo-Json -Depth 10
 
-#Cleaning some variables for testing
-$PostgreSQLWebData = $null
-$ScrapperAddVersion = $null
-##Old Scraping tool - Broken
-#. "$($ScriptPath)\Essentials\Get-HtmlTables.ps1"
-#$DownloadURL = "https://www.enterprisedb.com/downloads/postgres-postgresql-downloads"
-#$Scrapper = Get-HTMLTables -firstRowHeader $true -url 'https://www.enterprisedb.com/downloads/postgres-postgresql-downloads'
-
-##New Scraping tool
-$Page = Invoke-WebRequest 'https://www.enterprisedb.com/downloads/postgres-postgresql-downloads'
-$Unicode = [System.Text.Encoding]::Unicode.GetBytes($Page.Content)
-$Document = New-Object -Com 'HTMLFile'
-if ($Document.IHTMLDocument2_Write) { $Document.IHTMLDocument2_Write($Unicode) } else { $Document.write($Unicode) }
-$Document.Close()
-$Data = $Document.getElementById('__NEXT_DATA__').innerHTML | ConvertFrom-Json
-#$Data |ConvertTo-Json -Depth 10
-
-#Add full version number to array
-foreach ($ScrapperAddVersion in $Data.props.pageProps.postgreSQLDownloads.products){
+    #Add full version number to array
+    foreach ($ScrapperAddVersion in $Data.props.pageProps.postgreSQLDownloads.products){
     $Ver= -join("$($ScrapperAddVersion.field_installer_version)", ".", "$($ScrapperAddVersion.field_sub_version)");
     $ScrapperAddVersion | Add-Member -MemberType NoteProperty -Name "PostgreSQLVersion" -value $Ver
-    [Array]$PostgreSQLWebData += $ScrapperAddVersion
-
-}
-##New Scraping end
+     [Array]$PostgreSQLWebData += $ScrapperAddVersion
+     }
 
 
 ##Main menu
@@ -104,12 +98,12 @@ function PostgreSQLVersions
 }
 
 
-function DownloadNInstall
+function DownloadNInstall()
 {
 	do
 	{
         Clear-Host
-    if((Get-Childitem HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ | ? { $_ -match "PostgreSQL" }).GetValue('UninstallString')){
+    if(Test-PGInstalled){
         
         $msg = 'It seems that there is already PostgreSQL Installed on your system, Would like to remove it first? (Silent) [Y/N]'
         do {
@@ -118,6 +112,9 @@ function DownloadNInstall
             $UninstallPath = (Get-Childitem HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ | ? { $_ -match "PostgreSQL" }).GetValue('UninstallString')
             Write-Host "Removing PostgreSQL, Please Wait"
             Start-Process -FilePath $UninstallPath -ArgumentList "--mode unattended --unattendedmodeui none" -Wait
+            
+            Remove-Item -Recurse -Force "c:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue
+            Remove-Item -Recurse -Force "c:\Program Files (x86)\PostgreSQL" -ErrorAction SilentlyContinue
             $response = 'n'
         }
         } until ($response -eq 'n')
@@ -150,31 +147,21 @@ function DownloadNInstall
 		$DownloadLink = ((Invoke-WebRequest -Uri $GetDownloadLink).links | Where-Object { $_.innerText -like "*Click here if your download does not start automatically.*" }).href
         Write-Host $DownloadLink
 
+        Write-Host "initiate PostgreSQL installation"
 		Invoke-WebRequest $DownloadLink -OutFile "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe"
-    break
-        $PassResponseYes = New-Object System.Management.Automation.Host.ChoiceDescription 'Yes'   
-        $PassResponseNo = New-Object System.Management.Automation.Host.ChoiceDescription 'No'
-
-        $ResponseTitle = "Generate superpassword?"
-        $ResponseMessage = "Would you like to generate super password for PostgreSQL? (Pick no will result an installation without '--Superpassword' parameter)"
-        $PassOptions = [System.Management.Automation.Host.ChoiceDescription[]]($PassResponseYes,$PassResponseNo)
-        $PassResponse = $host.UI.PromptForChoice($ResponseTitle,$ResponseMessage,$PassOptions,0)
         
-        Switch ($PassResponse) {
-        
-            0{
-                $GeneratePassword = New-Object -TypeName PSObject
-                $GeneratePassword | Add-Member -MemberType ScriptProperty -Name "Password" -Value { ("!@#$%^&*0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz".tochararray() | sort {Get-Random})[0..8] -join '' }
-                $SuperPassword = $GeneratePassword
+        Wait-FileUnlock "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe"
 
-            }1{
+        Start-Process -FilePath "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe" -ArgumentList "--mode unattended --superpassword $($AidocPass)" -Wait
 
-                Test
-            }
+        if(Test-PGInstalled){
+            Write-Host "PostgreSQL installed successfully"
+        }elseif(!(Test-PGInstalled)){
+            Write-Host "Error occured Please contact your Administrator"
         }
-        
 
-
+        pause
+        $ans = "Q"
 
 
 	}
