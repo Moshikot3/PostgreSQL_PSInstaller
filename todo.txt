@@ -1,5 +1,7 @@
--Run script with PSScriptRoot (From everywhere)
--Study PostgreSQL and their Installation Arguments 
+-Run script with PSScriptRoot (From everywhere) -V
+-Study PostgreSQL and their Installation Arguments -V
 -Verify if PostgreSQL already installed -V
--Verify internet connection
--Add some logs
+-Verify internet connection -V
+-Create Aidocapp database  -V
+-Check if PostgreSql is running before creating user & database -V
+-Add some logs -V
