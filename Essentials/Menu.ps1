@@ -135,7 +135,7 @@ function DownloadNInstall
 
             throw "Somthing went wrong while creating $($aidocuser) user and database $($dbname)"
         }
-
+        pause
         #End
         Stop-Transcript
         Main-Menu

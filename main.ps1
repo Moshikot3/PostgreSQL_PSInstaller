@@ -1,4 +1,5 @@
 ﻿##Main
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 if(!(Test-Connection -computername www.enterprisedb.com -quiet -Count 2)){
     throw "Script can't connect to Enterprisedb.com (PostgreSQL download source), Please check internet connection"
 }
