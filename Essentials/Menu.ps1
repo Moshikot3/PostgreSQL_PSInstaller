@@ -59,8 +59,13 @@ function DownloadNInstall
 
 					Remove-Item -Recurse -Force "$($env:ProgramFiles)\PostgreSQL\" -ErrorAction SilentlyContinue
 					break;
-				}
-			} until ($response -eq 'n')
+				}elseif($response -eq 'n'){
+
+                    	Main-Menu
+		                break
+
+                }
+			} until ($response -eq 'skiptest')
 
 
 		}
@@ -81,6 +86,7 @@ function DownloadNInstall
 			Main-Menu
 			break
 		}
+        $selection = $null
 		$selection = $menu.Item([int]$ans); Write-Host $selection
 		Write-Host "Generating download links" -ForegroundColor Green
 
@@ -94,8 +100,13 @@ function DownloadNInstall
 
 		Wait-FileUnlock "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe"
 		Write-Host "Initiate PostgreSQL installation"
-
-		Start-Process -FilePath "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe" -ArgumentList "--mode unattended --superpassword $($AidocPass) --install_runtimes 0" -Wait
+        
+        if($selection.StartsWith("9")){
+            Start-Process -FilePath "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe" -ArgumentList "--mode unattended --superpassword $($AidocPass) --install_runtimes 0" -Wait 
+		    
+        }else{
+             Start-Process -FilePath "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe" -ArgumentList "--mode unattended --superpassword $($AidocPass)" -Wait
+        }
 
 		if (Test-PGInstalled) {
 			Write-Host "PostgreSQL installed successfully"
@@ -138,7 +149,6 @@ function DownloadNInstall
 		Pause
 		#End
 		Stop-Transcript
-		Main-Menu
 		break
 
 	}
