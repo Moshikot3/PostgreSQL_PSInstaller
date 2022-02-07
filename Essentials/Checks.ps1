@@ -13,7 +13,6 @@ function Test-PGInstalled
 	$true
 }
 
-
 function Wait-FileUnlock {
 	param(
 		[Parameter()]

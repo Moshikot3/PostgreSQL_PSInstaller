@@ -5,6 +5,8 @@ if (!(Test-Connection -ComputerName www.enterprisedb.com -Quiet -Count 2)) {
 }
 
 
+
+
 $datetime = (Get-Date -Format 'dd_mm_yy__HH_mm')
 $ProgressPreference = 'SilentlyContinue'
 #$ScriptPath = "D:\PostgreSQL"
