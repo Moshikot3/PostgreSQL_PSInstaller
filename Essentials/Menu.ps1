@@ -1,31 +1,3 @@
-﻿$AidocUser = "aidocapp"
-$AidocPass = "aidcopass"
-
-$ProgressPreference = 'SilentlyContinue'
-$ScriptPath = "D:\PostgreSQL"
- ."$($Scriptpath)\Essentials\Checks.ps1"
-
-
-    #Cleaning some variables for testing
-    $PostgreSQLWebData = $null
-    $ScrapperAddVersion = $null
-    ##New Scraping tool
-    $Page = Invoke-WebRequest 'https://www.enterprisedb.com/downloads/postgres-postgresql-downloads'
-    $Unicode = [System.Text.Encoding]::Unicode.GetBytes($Page.Content)
-    $Document = New-Object -Com 'HTMLFile'
-    if ($Document.IHTMLDocument2_Write) { $Document.IHTMLDocument2_Write($Unicode) } else { $Document.write($Unicode) }
-    $Document.Close()
-    $Data = $Document.getElementById('__NEXT_DATA__').innerHTML | ConvertFrom-Json
-    #$Data |ConvertTo-Json -Depth 10
-
-    #Add full version number to array
-    foreach ($ScrapperAddVersion in $Data.props.pageProps.postgreSQLDownloads.products){
-    $Ver= -join("$($ScrapperAddVersion.field_installer_version)", ".", "$($ScrapperAddVersion.field_sub_version)");
-    $ScrapperAddVersion | Add-Member -MemberType NoteProperty -Name "PostgreSQLVersion" -value $Ver
-     [Array]$PostgreSQLWebData += $ScrapperAddVersion
-     }
-
-
 ##Main menu
 function Main-Menu
 {
@@ -103,9 +75,8 @@ function DownloadNInstall
             Write-Host "Removing PostgreSQL, Please Wait"
             Start-Process -FilePath $UninstallPath -ArgumentList "--mode unattended --unattendedmodeui none" -Wait
             
-            Remove-Item -Recurse -Force "c:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue
-            Remove-Item -Recurse -Force "c:\Program Files (x86)\PostgreSQL" -ErrorAction SilentlyContinue
-            $response = 'n'
+            Remove-Item -Recurse -Force "$($env:ProgramFiles)\PostgreSQL\" -ErrorAction SilentlyContinue
+            break;
         }
         } until ($response -eq 'n')
 
@@ -151,16 +122,16 @@ function DownloadNInstall
         }
 
 
-        Write-Host "Creating user"
-        #Create AidocApp user
-        #--Last directory set-location
-        Set-Location "$PostgreDirectory\$((gci $PostgreDirectory | ? { $_.PSIsContainer } | sort CreationTime)[-1].Name)\bin\"
-        $env:PGPASSWORD = 'aidcopass';
-        .\psql -U postgres -c "CREATE ROLE $($AidocUser) LOGIN SUPERUSER PASSWORD '$($aidocPass)';"
+        Write-Host "Creating user as superuser"
+        #Create AidocApp user as superuser
+        #--Get last created directory
+        $psqlPath = "$($env:ProgramFiles)\PostgreSQL\$((gci $PostgreDirectory | ? { $_.PSIsContainer } | sort CreationTime)[-1].Name)\bin\psql"
+        $env:PGPASSWORD = "$($aidocPass)";
+        &"$($psqlpath)" -U postgres -c "CREATE ROLE $($AidocUser) LOGIN SUPERUSER PASSWORD '$($aidocPass)';"
             
 
         pause
-        $ans = "Q"
+        break;
 
 
 	}
@@ -168,22 +139,3 @@ function DownloadNInstall
 
 
 }
-
-
-if ([Environment]::Is64BitOperatingSystem) {
-	$bit = "Windows x86-64"
-    $PostgreDirectory = "C:\Program Files\PostgreSQL"
-} else {
-	$bit = "Windows x86-32"
-    $PostgreDirectory = "C:\Program Files (x86)\PostgreSQL"
-}
-
-##Collect all Available PostgreSQL Versions
-$Versions = ($PostgreSQLWebData | ?{$_.field_os -eq $bit}).PostgreSQLVersion
-
-
-if (!(Test-Path $ScriptPath\Downloads)) {
-	New-Item -ItemType Directory -Path $ScriptPath\Downloads
-}
-
-Main-Menu
