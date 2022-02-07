@@ -1,1 +1,1 @@
-powershell.exe -ExecutionPolicy Bypass -File "%~dp0Menu.ps1"
+powershell.exe -ExecutionPolicy Bypass -File "%~dp0main.ps1"
