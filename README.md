@@ -3,9 +3,9 @@ Usage: Run.bat as administrator
 
 Tested on:
 
-Windows 10 20H2
+Windows 10 20H2 64bit
 
-Windows 11 21G2
+Windows 11 21G2 64bit
 
 Windows server 2012 R2 - PS 4.0
 
