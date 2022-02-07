@@ -1,2 +1,2 @@
 # PostgreSQL
-Under construciton
+Usage: Run.bat as administrator

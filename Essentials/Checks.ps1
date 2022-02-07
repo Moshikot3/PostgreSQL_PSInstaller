@@ -3,7 +3,7 @@ function Test-PGInstalled
 
      try 
     { 
-        (Get-Childitem HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ | ? { $_ -match "PostgreSQL" }).GetValue('UninstallString')
+        (Get-Childitem HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ | ? { $_ -match "PostgreSQL*" }).GetValue('UninstallString')
     }
     catch
     {

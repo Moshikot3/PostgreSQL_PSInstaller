@@ -7,32 +7,14 @@ function Main-Menu
 		Write-Host "======= PostgreSQL Menu======="
 		"1.Get Available PostgreSQL Versions"
 		"2.Download & Install"
-		"3.Menu3"
 
 		$menuresponse = Read-Host [Enter Selection]
 		switch ($menuresponse) {
 			"1" { PostgreSQLVersions }
 			"2" { DownloadNInstall }
-			"3" { sub-menu3 }
 		}
 	}
-	until (1..3 -contains $menuresponse)
-}
-
-function sub-menu1
-{
-	do
-	{
-		Clear-Host
-		Write-Host "1. Option 1 `n2. Option 2 `n3. Return to Main Menu"
-		$menuresponse = Read-Host [Enter Selection]
-		switch ($menuresponse) {
-			"1" { Option-1 }
-			"2" { Option-2 }
-			"3" { Main-Menu }
-		}
-	}
-	until (1..3 -contains $menuresponse)
+	until (1..2 -contains $menuresponse)
 }
 
 ## Get Available PostgreSQL Versions
@@ -50,7 +32,6 @@ function PostgreSQLVersions
 		$menuresponse = Read-Host [Enter Selection]
 		switch ($menuresponse) {
 			"1" { PostgreSQLVersions; continue }
-			"2" { sub-menu2 }
 			"B" { Main-Menu }
 		}
 	}
@@ -64,10 +45,11 @@ function DownloadNInstall
 {
 	do
 	{
+        Start-Transcript -Path "$($ScriptPath)\logs\PostgreSQL_$datetime.log"
         Clear-Host
     if(Test-PGInstalled){
         
-        $msg = 'It seems that there is already PostgreSQL Installed on your system, Would like to remove it first? (Silent) [Y/N]'
+        $msg = 'It seems that there is already PostgreSQL Installed on your system, Would you like to remove it first? (Silent) [Y/N]'
         do {
             $response = Read-Host -Prompt $msg
         if ($response -eq 'y') {
@@ -100,7 +82,7 @@ function DownloadNInstall
 			Break
 		}
 		$selection = $menu.Item([int]$ans); Write-Host $selection
-		Write-Host "Generating download link" -ForegroundColor Green
+		Write-Host "Generating download links" -ForegroundColor Green
 
 		$GetDownloadLink = "https://www.enterprisedb.com/postgresql-tutorial-resources-training?uuid="+($PostgreSQLWebData | ?{ $_.PostgreSQLVersion -contains $selection -and $_.field_os -eq $bit }).uuid
 		Write-Host $GetDownloadLink
@@ -108,30 +90,56 @@ function DownloadNInstall
 		$DownloadLink = ((Invoke-WebRequest -Uri $GetDownloadLink).links | Where-Object { $_.innerText -like "*Click here if your download does not start automatically.*" }).href
         Write-Host $DownloadLink
 
-        Write-Host "initiate PostgreSQL installation"
 		Invoke-WebRequest $DownloadLink -OutFile "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe"
         
         Wait-FileUnlock "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe"
+        Write-Host "Initiate PostgreSQL installation"
 
         Start-Process -FilePath "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe" -ArgumentList "--mode unattended --superpassword $($AidocPass)" -Wait
 
         if(Test-PGInstalled){
             Write-Host "PostgreSQL installed successfully"
         }elseif(!(Test-PGInstalled)){
-            Write-Host "Error occured Please contact your Administrator"
+            throw "Error with installation occured Please contact your Administrator$($error[0])"
         }
 
+        $lastpginstalled = (gci "$($env:ProgramFiles)\PostgreSQL" | ? { $_.PSIsContainer } | sort CreationTime)[-1].Name
+        if((Get-Service -Name "postgresql$($lastinstallbit)$($lastpginstalled)" -ErrorAction Stop).Status -ne 'Running'){
+            try{Start-Service -Name "postgresql$($lastinstallbit)$($lastpginstalled)"}
+            catch{throw "PostgreSQL Service could not be started. $($error[0])"}
 
-        Write-Host "Creating user as superuser"
+        }
+
+        Remove-Item "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe" -Force
+
+        Write-Host "Creating $($aidocuser) user"
         #Create AidocApp user as superuser
         #--Get last created directory
-        $psqlPath = "$($env:ProgramFiles)\PostgreSQL\$((gci $PostgreDirectory | ? { $_.PSIsContainer } | sort CreationTime)[-1].Name)\bin\psql"
+        $psqlPath = "$($env:ProgramFiles)\PostgreSQL\$($lastpginstalled)\bin\"
         $env:PGPASSWORD = "$($aidocPass)";
-        &"$($psqlpath)" -U postgres -c "CREATE ROLE $($AidocUser) LOGIN SUPERUSER PASSWORD '$($aidocPass)';"
-            
 
-        pause
-        break;
+        #Create users and databases
+        &"$($psqlpath)psql.exe" -c "create user $($aidocuser) password '$($aidocpass)';" "user=postgres dbname=postgres password=$($aidocpass)" | Out-Null
+        #&"$($psqlpath)psql.exe" -U postgres -c "CREATE ROLE $($AidocUser) LOGIN SUPERUSER PASSWORD '$($aidocPass)';"
+
+        &"$($psqlpath)psql.exe" -c "CREATE DATABASE $($aidocdb)" "user=postgres dbname=postgres password=$($aidocpass)"
+
+        &"$($psqlpath)psql.exe" -c "GRANT ALL PRIVILEGES ON DATABASE $($aidocdb) TO $($aidocuser);" "user=postgres dbname=postgres password=$($aidocpass)"
+
+        &"$($psqlpath)psql.exe" -l "user=$($aidocuser) dbname=$($aidocdb) password=$($aidocpass)"
+
+        #Check if database is exist
+        if ((&"$($psqlpath)psql.exe" -l "user=$($aidocuser) dbname=$($aidocdb) password=$($aidocpass)" | out-string) -match "aidocapp*"){
+            Write-Host "Database $($aidocdb) has been created with privileges for user $($aidocuser)" -ForegroundColor Green 
+        }else{
+
+            throw "Somthing went wrong while creating $($aidocuser) user and database $($dbname)"
+        }
+
+        #End
+        Stop-Transcript
+        Main-Menu
+        break
 
 
 	}
