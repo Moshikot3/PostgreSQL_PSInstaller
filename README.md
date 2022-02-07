@@ -7,6 +7,7 @@ Windows 10 20H2
 Windows 11 21G2
 
 Windows server 2012 R2 - PS 4.0
+
 Windows Server 2016 - PS 5.1
 
 
