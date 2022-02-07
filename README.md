@@ -13,6 +13,5 @@ Windows Server 2016 - PS 5.1
 
 
 If using windows server, 
-You should disable (You don't have to) "IE Enhanced Security Configuration" to avoid some warnings pop-ups.
-
+"IE Enhanced Security Configuration" can cause some warning messages.
 Caused by the scrapper
