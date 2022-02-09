@@ -124,7 +124,7 @@ function DownloadNInstall
 		Remove-Item "$($ScriptPath)\Downloads\$($selection -replace '\.','_').exe" -Force
 
 		Write-Host "Creating $($aidocuser) user"
-		#Create AidocApp user as superuser
+		#Create AidocApp user
 		#--Get last created directory
 		$psqlPath = "$($env:ProgramFiles)\PostgreSQL\$($lastpginstalled)\bin\"
 		$env:PGPASSWORD = "$($aidocPass)";
